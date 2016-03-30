@@ -15,14 +15,22 @@ import com.android.volley.toolbox.ImageRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
-import org.apache.http.entity.mime.MultipartEntity;
+//import org.apache.http.entity.mime.HttpMultipartMode;
+//import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+
+import ch.boye.httpclientandroidlib.HttpEntity;
+import ch.boye.httpclientandroidlib.entity.ContentType;
+import ch.boye.httpclientandroidlib.entity.mime.HttpMultipartMode;
+import ch.boye.httpclientandroidlib.entity.mime.MultipartEntityBuilder;
 
 /**
  * Created by adm on 29.03.16.
@@ -65,7 +73,12 @@ public class DreamscopeRequest {
         Log.i(LOG_TAG, "POST request is called");
 
 
-        final MultipartEntity entity = new MultipartEntity();
+        final MultipartEntityBuilder entityBuilder = MultipartEntityBuilder.create();
+        entityBuilder.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
+        entityBuilder.addBinaryBody("image", image, ContentType.create("image/png"), "image.png"); //Take care of contentType and filename!
+        entityBuilder.addTextBody("filter", filter);
+
+        final HttpEntity httpEntity = entityBuilder.build();
 
         StringRequest r = new StringRequest(Request.Method.POST, url, new Response.Listener<String>() {
             @Override
@@ -81,21 +94,26 @@ public class DreamscopeRequest {
         }){
             @Override
             protected Map<String,String> getParams(){
-                Map<String,String> params = new HashMap<String, String>();
-                params.put("filter", filter);
+                Map<String, String> params = new HashMap<String, String>();
+                params.put("Content-Type", httpEntity.getContentType().getValue());
                 return params;
             }
 
             @Override
             public byte[] getBody() throws AuthFailureError {
-
-                return image;
+                ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+                try {
+                    httpEntity.writeTo(byteArrayOutputStream);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                return byteArrayOutputStream.toByteArray();
 
             }
             @Override
             public String getBodyContentType()
             {
-                return entity.getContentType().getValue(); //посмотри здесь сам, как я понял ты что-то находил как правильно это делать
+                return httpEntity.getContentType().getValue(); //посмотри здесь сам, как я понял ты что-то находил как правильно это делать
             }
         };
 
