@@ -21,7 +21,7 @@ public class MainActivity extends AppCompatActivity {
 
     private String imagesUuid;
 
-    DreamscopeRequest drRequest;
+    static DreamscopeRequest drRequest;
     DreamscopeRequestListener listener  = new DreamscopeRequestListener() {
         @Override
         public void onFail() {
@@ -29,19 +29,15 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @Override
-        public void onGet(int processStatus) {
-            if (processStatus == 2){
+        public void onGet(int processStatus, String urlFiltredImg) {
+            Log.d(LOG_TAG, Integer.toString(processStatus));
+            if (processStatus == 2 && !urlFiltredImg.equals("")){
                 Log.d(LOG_TAG, "Image is Ready to be uploaded.");
-                drRequest.getImage(imagesUuid);
+                drRequest.getImage(urlFiltredImg);
             }else {
 
                 Log.d(LOG_TAG, "Image is not ready to be uploaded.");
-                try {
-                    Thread.sleep(2000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                drRequest.get(imagesUuid);
+                r.run();
             }
         }
 
@@ -52,6 +48,7 @@ public class MainActivity extends AppCompatActivity {
                 public void run() {
 
                     mImage.setImageBitmap(bitmap);
+
                 }
             });
         }
@@ -59,6 +56,18 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onPostImage(String uuid) {
             imagesUuid = uuid;
+            drRequest.get(imagesUuid);
+        }
+    };
+
+    Runnable r = new Runnable() {
+        @Override
+        public void run() {
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
             drRequest.get(imagesUuid);
         }
     };
@@ -95,7 +104,11 @@ public class MainActivity extends AppCompatActivity {
         bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
         byte[] byteArray = stream.toByteArray();
 
+
         drRequest.postImage(byteArray, "confetti");
+
+        Intent intent = new Intent(this, testDialogProgressBar.class);
+        startActivity(intent);
     }
 
     @Override

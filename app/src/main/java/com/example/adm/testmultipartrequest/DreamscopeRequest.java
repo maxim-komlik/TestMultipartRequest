@@ -42,6 +42,7 @@ public class DreamscopeRequest {
 
 
     DreamscopeRequestListener dreamscopeRequestListener;
+    DreamscopeRequestListenerOnGetImage dreamscopeRequestListenerOnGetImage;
     RequestQueue mQueue;
 
 
@@ -57,7 +58,11 @@ public class DreamscopeRequest {
         StringRequest r = new StringRequest(Request.Method.GET, url, new Response.Listener<String>() {
             @Override
             public void onResponse(String response) {
-                dreamscopeRequestListener.onGet(Integer.parseInt(findKey(prepareForLogging(parseThisObjectToJSON(response)), "processing_status")));
+                try {
+                    dreamscopeRequestListener.onGet((Integer) parseThisObjectToJSON(response).get("processing_status"), (String) parseThisObjectToJSON(response).get("filtered_url"));
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
             }
         }, new Response.ErrorListener() {
             @Override
@@ -83,7 +88,11 @@ public class DreamscopeRequest {
         StringRequest r = new StringRequest(Request.Method.POST, url, new Response.Listener<String>() {
             @Override
             public void onResponse(String response) {
-                dreamscopeRequestListener.onPostImage(findKey(prepareForLogging(parseThisObjectToJSON(response)), "uuid"));
+                try {
+                    dreamscopeRequestListener.onPostImage((String)parseThisObjectToJSON(response).get("uuid"));
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
 
             }
         }, new Response.ErrorListener() {
@@ -127,6 +136,7 @@ public class DreamscopeRequest {
             @Override
             public void onResponse(Bitmap bitmap) {
                 dreamscopeRequestListener.onGetImage(bitmap);
+                dreamscopeRequestListenerOnGetImage.onGetImage();
             }
         }, 1000, 1000, Bitmap.Config.RGB_565, new Response.ErrorListener(){
 
@@ -140,118 +150,6 @@ public class DreamscopeRequest {
         mQueue.add(IR);
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    @TargetApi(Build.VERSION_CODES.KITKAT)
-    public ArrayList<ArrayList<Object>> prepareForLogging(JSONObject json){
-
-        ArrayList<ArrayList<Object>> StringsAL = new ArrayList<ArrayList<Object>>();
-
-
-        JSONArray jsonArray = json.names();
-
-
-        for (int i = 0; i<jsonArray.length(); i++){
-            ArrayList<Object> qwer = new ArrayList<Object>();
-
-            try {
-                JSONObject JSONobj = new JSONObject(json.getString(jsonArray.getString(i)));
-                qwer.add(jsonArray.getString(i));
-                qwer.add(prepareForLogging(JSONobj));
-                Log.d(LOG_TAG, "After parsing JSONObject.");
-
-
-            } catch (JSONException ex) {
-                ex.printStackTrace();
-                qwer.clear();
-                try {
-                    JSONArray JSONarray = new JSONArray(json.getJSONArray(jsonArray.getString(i)));
-                    qwer.add(jsonArray.getString(i));
-                    qwer.add(parseJSONArray(JSONarray));
-                    Log.d(LOG_TAG, "after parsing JSONArray.");
-                } catch (JSONException e) {
-
-                    e.printStackTrace();
-                    qwer.clear();
-                    try {
-                        qwer.add(jsonArray.getString(i));
-                        qwer.add(json.getString(jsonArray.getString(i)));
-
-                    } catch (JSONException e1) {
-                        e1.printStackTrace();
-                        qwer.clear();
-                        Log.d(LOG_TAG, "Parsing error.");
-                    }
-                }
-            }
-
-            StringsAL.add(qwer);
-
-
-        }
-
-        return StringsAL;
-    }
-
-    public ArrayList<Object> parseJSONArray(JSONArray jsonArray){
-        Log.d(LOG_TAG, "Method parseJSONArray is called.");
-
-        ArrayList<Object> AL = new ArrayList<Object>();
-
-
-        for (int i = 0; i<jsonArray.length(); i++){
-            try {
-                AL.add(jsonArray.getString(i));
-            }catch (JSONException e){
-                try {
-                    AL.add((ArrayList<Object>) parseJSONArray(((JSONArray) jsonArray.getJSONArray(i))));
-                } catch (JSONException e1) {
-                    e1.printStackTrace();
-                }
-            }
-        }
-
-        return AL;
-    }
-
-    public String findKey(ArrayList<ArrayList<Object>> AL, String key){
-        String s = "";
-
-        for (int i = 0; i < AL.size(); i++){
-            s = findKeyInArray((ArrayList) AL.get(i), key);
-
-            if(!s.equals("")){
-                return s;
-            }
-
-        }
-
-
-        return s;
-    }
 
     public JSONObject parseThisObjectToJSON(String s){
 
@@ -268,28 +166,18 @@ public class DreamscopeRequest {
 
     }
 
-    public String findKeyInArray(ArrayList<Object> AL, String key){
-        String s = "";
-        for (int i = 0; i < AL.size(); i++){
-            if (AL.get(i).getClass() == (new ArrayList<Object>()).getClass()){
-                s = findKeyInArray((ArrayList) AL.get(i), key);
-            }if (AL.get(i).getClass() == (new String()).getClass()) {
-                if (((String) AL.get(i)).equals(key)) {
-                    s = (String) AL.get(i+1);
-                }
-            }
-            if (!s.equals("")){
-                return s;
-            }
-        }
-
-        return s;
+    public void setDreamscopeRequestListenerOnGetImage(DreamscopeRequestListenerOnGetImage listenerOnGetImage){
+        this.dreamscopeRequestListenerOnGetImage = listenerOnGetImage;
     }
 }
 
 interface DreamscopeRequestListener{
     void onFail();
-    void onGet(int processStatus);
+    void onGet(int processStatus, String urlFiltredImg);
     void onGetImage(Bitmap bitmap);
     void onPostImage(String uuid);
+}
+
+interface DreamscopeRequestListenerOnGetImage{
+    void onGetImage();
 }
